@@ -442,8 +442,8 @@ class CliTelnetSession : public InputDevice, public TelnetSession, public CliSes
 {
 public:
 
-    CliTelnetSession(boost::asio::ip::tcp::socket socket, Cli& cli, std::function< void(std::ostream&)> exitAction, std::size_t historySize ) :
-        InputDevice(detail::asio::BoostExecutor(socket)),
+    CliTelnetSession(boost::asio::ip::tcp::socket socket, Cli& cli, std::function< void(std::ostream&)> exitAction, std::size_t historySize, std::shared_ptr<detail::asio::ExecutorPlugin> plugin = {}) :
+            InputDevice(detail::asio::BoostExecutor(socket, plugin)),
         TelnetSession(std::move(socket)),
         CliSession(cli, TelnetSession::OutStream(), historySize),
         poll(*this, *this)
@@ -534,15 +534,17 @@ private:
 class CliTelnetServer : public Server
 {
 public:
-    CliTelnetServer(detail::asio::BoostExecutor::ContextType& ios, short port, Cli& _cli, std::size_t _historySize=100 ) :
+    CliTelnetServer(detail::asio::BoostExecutor::ContextType& ios, short port, Cli& _cli, std::size_t _historySize=100, std::shared_ptr<detail::asio::ExecutorPlugin> plugin = {} ) :
         Server(ios, port),
         cli(_cli),
-        historySize(_historySize)
+        historySize(_historySize),
+        executorPlugin(plugin)
     {}
-    CliTelnetServer(detail::asio::BoostExecutor::ContextType& ios, std::string address, short port, Cli& _cli, std::size_t _historySize=100 ) :
+    CliTelnetServer(detail::asio::BoostExecutor::ContextType& ios, std::string address, short port, Cli& _cli, std::size_t _historySize=100, std::shared_ptr<detail::asio::ExecutorPlugin> plugin = {} ) :
         Server(ios, address, port),
         cli(_cli),
-        historySize(_historySize)
+        historySize(_historySize),
+        executorPlugin(plugin)
     {}
     void ExitAction( std::function< void(std::ostream&)> action )
     {
@@ -550,12 +552,13 @@ public:
     }
     virtual std::shared_ptr<Session> CreateSession(boost::asio::ip::tcp::socket socket) override
     {
-        return std::make_shared<CliTelnetSession>(std::move(socket), cli, exitAction, historySize);
+        return std::make_shared<CliTelnetSession>(std::move(socket), cli, exitAction, historySize, executorPlugin);
     }
 private:
     Cli& cli;
     std::function< void(std::ostream&)> exitAction;
     std::size_t historySize;
+    std::shared_ptr<detail::asio::ExecutorPlugin> executorPlugin;
 };
 
 

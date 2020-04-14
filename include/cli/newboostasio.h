@@ -36,17 +36,28 @@ namespace cli {
 namespace detail {
 namespace newboost {
 
+class ExecutorPlugin {
+    public:
+      virtual void afterPost() {}
+};
+
 class BoostExecutor
 {
 public:
     using ContextType = boost::asio::io_context;
-    explicit BoostExecutor(ContextType& ios) :
-        executor(ios.get_executor()) {}
-    explicit BoostExecutor(boost::asio::ip::tcp::socket& socket) :
-        executor(socket.get_executor()) {}
-    template <typename T> void Post(T&& t) { boost::asio::post(executor, std::forward<T>(t)); }
+    explicit BoostExecutor(ContextType& ios, std::shared_ptr<ExecutorPlugin> _plugin = {}) :
+            executor(ios.get_executor()), plugin(_plugin) {}
+    explicit BoostExecutor(boost::asio::ip::tcp::socket& socket, std::shared_ptr<ExecutorPlugin> _plugin = {}) :
+            executor(socket.get_executor()), plugin(_plugin) {}
+    template <typename T> void Post(T&& t) {
+        boost::asio::post(executor, std::forward<T>(t));
+        if (plugin) {
+            plugin->afterPost();
+        }
+    }
 private:
     boost::asio::executor executor;
+    std::shared_ptr<ExecutorPlugin> plugin;
 };
 
 inline boost::asio::ip::address IpAddressFromString(const std::string& address)

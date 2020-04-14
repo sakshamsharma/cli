@@ -42,9 +42,9 @@ class CliLocalTerminalSession : public CliSession
 {
 public:
 
-    CliLocalTerminalSession(Cli& _cli, detail::asio::BoostExecutor::ContextType& ios, std::ostream& _out, std::size_t historySize = 100) :
+    CliLocalTerminalSession(Cli& _cli, detail::asio::BoostExecutor::ContextType& ios, std::ostream& _out, std::size_t historySize = 100, std::shared_ptr<detail::asio::ExecutorPlugin> plugin = {}) :
         CliSession(_cli, _out, historySize),
-        kb(detail::asio::BoostExecutor(ios)),
+        kb(detail::asio::BoostExecutor(ios, plugin)),
         ih(*this, kb)
     {
         Prompt();
